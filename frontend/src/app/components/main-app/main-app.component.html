@@ -1,0 +1,69 @@
+<div class="main-container">
+  <header class="app-header">
+    <span>Student Name: SHUAIBU IDRIS</span>
+    <span>Group: P3231</span>
+    <span>Variant: 4221</span>
+    <button (click)="logout()">Logout</button>
+  </header>
+
+  <h1 class="page-title">Check Point on a Graph (LAB4)</h1>
+
+  <div class="content-grid">
+    <section class="interaction-zone">
+      <canvas #canvas width="300" height="300" (click)="handleCanvasClick($event)"></canvas>
+
+      <form (submit)="submitForm(); $event.preventDefault()">
+        <div class="input-group">
+          <label>X Coordinate:</label>
+          <select name="x" [(ngModel)]="point.x">
+            <option *ngFor="let val of xOptions" [value]="val">{{val}}</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label>Y Coordinate (-3 to 3):</label>
+          <input type="text" name="y" [(ngModel)]="point.y">
+        </div>
+
+        <div class="input-group">
+          <label>Radius R:</label>
+          <select name="r" [(ngModel)]="point.r" (change)="drawCanvas()">
+            <option *ngFor="let val of rOptions" [ngValue]="val">{{val}}</option>
+          </select>
+        </div>
+
+        <div class="button-row">
+          <button type="submit" class="btn-check">Check Point</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="table-zone">
+      <div class="table-header-actions">
+        <h3>Results History</h3>
+        <button type="button" class="btn-clear" (click)="clearHistory()">Clear History</button>
+      </div>
+
+      <table>
+        <thead>
+        <tr>
+          <th>X</th>
+          <th>Y</th>
+          <th>R</th>
+          <th>Result</th>
+          <th>Time</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let res of results">
+          <td>{{res.x | number:'1.2-2'}}</td>
+          <td>{{res.y | number:'1.2-2'}}</td>
+          <td>{{res.r}}</td>
+          <td [style.color]="res.hit ? 'green' : 'red'">{{res.hit ? 'HIT' : 'MISS'}}</td>
+          <td>{{res.executionTime | date:'HH:mm:ss'}}</td>
+        </tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+</div>
