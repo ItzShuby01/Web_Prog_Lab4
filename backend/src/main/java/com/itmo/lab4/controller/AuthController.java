@@ -44,7 +44,7 @@ public class AuthController {
         try {
             // Authenticate the user using the AuthenticationManager
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+                    new UsernamePasswordAuthenticationToken(request.username(), request.password())
             );
 
             // If successful, set the authentication object in the security context

@@ -19,21 +19,21 @@ public class AuthService {
     // Handles user registration
     public User registerUser(AuthRequest request) throws DataIntegrityViolationException, IllegalArgumentException {
         // Simple check to ensure required fields are present
-        if (request.getUsername() == null || request.getPassword() == null || request.getPassword().isEmpty()) {
+        if (request.username() == null || request.password() == null || request.password().isEmpty()) {
             throw new IllegalArgumentException("Username and password must be provided.");
         }
 
         // Check if user already exists
-        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+        if (userRepository.findByUsername(request.username()).isPresent()) {
             // A specific exception that the controller can map to a 409 Conflict status
             throw new DataIntegrityViolationException("User with this username already exists.");
         }
 
         User newUser = new User();
-        newUser.setUsername(request.getUsername());
+        newUser.setUsername(request.username());
 
         // HASH the password before saving to the database
-        newUser.setPassword(passwordEncoder.encode(request.getPassword()));
+        newUser.setPassword(passwordEncoder.encode(request.password()));
 
         return userRepository.save(newUser);
     }
