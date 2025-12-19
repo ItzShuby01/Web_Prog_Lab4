@@ -26,7 +26,7 @@ export class MainAppComponent implements OnInit, AfterViewInit {
 
   // Allowed R Options and X options
   xOptions: number[] = [-3, -2, -1, 0, 1, 2, 3, 4, 5];
-  rOptions: number[] = [1, 2, 3, 4, 5];
+  rOptions: number[] = [-3, -2, -1, 0, 1, 2, 3, 4, 5];
 
   point: PointRequest = { x: 0, y: 0, r: 3 };
   results: IPoint[] = [];
