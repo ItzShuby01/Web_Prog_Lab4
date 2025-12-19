@@ -55,7 +55,6 @@ public class SecurityConfig {
         http
                 // Disable CSRF as we're using a stateless API
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Since now the backend serve the frontend (html, css, js)
@@ -69,21 +68,5 @@ public class SecurityConfig {
                 .httpBasic(Customizer.withDefaults());
 
         return http.build();
-    }
-
-    // CORS Configuration (Allows Angular to talk to Spring)
-    // To test with 'ng serve' locally,
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        // Angular dev server runs on port 4200 / 8000
-        configuration.setAllowedOrigins(List.of("http://localhost:4200", "http://localhost:8000"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
     }
 }
