@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -52,29 +53,26 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Since Angular runs on different port (4200) -> need CORS
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // CSRF's not needed for stateless REST APIs
+                // Disable CSRF as we're using a stateless API
                 .csrf(AbstractHttpConfigurer::disable)
-                // Stateless session policy = no session cookies, only tokens/basic auth
+                .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-                // Authorization rules
                 .authorizeHttpRequests(auth -> auth
-                        // Allow anyone to access /api/auth/** (login and registration)
+                        // Since now the backend serve the frontend (html, css, js)
+                        // Allow public access to the Angular files
+                        .requestMatchers("/", "/index.html", "/favicon.ico", "/*.js", "/*.css").permitAll()
+                        // Allow authentication endpoints
                         .requestMatchers("/api/auth/**").permitAll()
-                        // Require authentication for all other endpoints (e.g., /api/area/**)
+                        // Secure everything else (like /api/area/**)
                         .anyRequest().authenticated()
-                );
-
-
-        // Enables HTTP Basic authentication
-        http.httpBasic(httpBasic -> {});
+                )
+                .httpBasic(Customizer.withDefaults());
 
         return http.build();
     }
 
     // CORS Configuration (Allows Angular to talk to Spring)
+    // To test with 'ng serve' locally,
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
