@@ -6,6 +6,8 @@ import com.itmo.lab4.service.AreaService;
 import com.itmo.lab4.service.PointValidationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,16 +21,20 @@ public class PointController {
     private final PointValidationService validationService;
     private final AreaService areaService;
     @PostMapping
-    public ResponseEntity<?> addPoint(@RequestBody PointRequestDTO request) {
+    public ResponseEntity<?> addPoint(@RequestBody PointRequestDTO request,
+                                      @AuthenticationPrincipal UserDetails userDetails) {
 
         // Validate based on source (form vs canvas)
         validationService.validate(request);
+
+        String username = userDetails.getUsername();
 
         // Process the point using AreaService
         CalculationResultDTO result = areaService.checkPoint(
                 request.x(),
                 request.y(),
-                request.r()
+                request.r(),
+                username
         );
 
         return ResponseEntity.ok(result);

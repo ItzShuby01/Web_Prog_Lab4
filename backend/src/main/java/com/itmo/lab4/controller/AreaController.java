@@ -9,6 +9,10 @@ import com.itmo.lab4.data.repository.UserRepository;
 import com.itmo.lab4.service.AreaService;
 import com.itmo.lab4.service.PointValidationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,7 +20,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/area") // Base URL for the main application endpoints
@@ -26,7 +29,7 @@ public class AreaController {
     private final AreaService areaService;
     private final PointRepository pointRepository;
     private final UserRepository userRepository; // To fetch the User object
-    private final PointValidationService validationService; // Injected for clean validation
+    private final PointValidationService validationService;
 
     // Helper method to get the current authenticated User entity
     private User getCurrentUser(UserDetails userDetails) {
@@ -53,21 +56,23 @@ public class AreaController {
         return new ResponseEntity<>(resultDTO, HttpStatus.CREATED);
     }
 
-    // --- Endpoint 2: Get all results for the current user (GET /api/area/history)
+    // --- Endpoint 2: Get all results for all users (GET /api/area/history)
+    // Now supports pagination and returns Page
     @GetMapping("/history")
-    public ResponseEntity<List<CalculationResultDTO>> getHistory(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<Page<CalculationResultDTO>> getHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
 
-        User currentUser = getCurrentUser(userDetails);
+        // Latest points first
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
 
-        // findAll by user ID
-        List<Point> userPoints = pointRepository.findByUserIdOrderByIdDesc(currentUser.getId());
+        // Fetch all points from all users
+        Page<Point> pointsPage = pointRepository.findAllByOrderByIdDesc(pageable);
 
-        // Convert the list of JPA Entities back to DTOs for the client
-        List<CalculationResultDTO> dtos = userPoints.stream()
-                .map(areaService::toDTO)
-                .collect(Collectors.toList());
+        // Convert Entities to DTOs (including username)
+        Page<CalculationResultDTO> dtoPage = pointsPage.map(areaService::toDTO);
 
-        return new ResponseEntity<>(dtos, HttpStatus.OK);
+        return new ResponseEntity<>(dtoPage, HttpStatus.OK);
     }
 
     // --- Endpoint 3: Clear all results for the current user ( DELETE /api/area/history)
@@ -77,7 +82,7 @@ public class AreaController {
         User currentUser = getCurrentUser(userDetails);
 
         // Fetch all points for the user
-        List<Point> userPoints = pointRepository.findByUserIdOrderByIdDesc(currentUser.getId());
+        List<Point> userPoints = pointRepository.findByUserId(currentUser.getId());
 
         // Delete them (using deleteAll instead of delete one-by-one)
         pointRepository.deleteAll(userPoints);

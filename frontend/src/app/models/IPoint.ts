@@ -4,7 +4,9 @@ export interface IPoint {
   y: number;
   r: number;
   hit: boolean;
-  executionTime: string; // The LocalDateTime is converted to a string
+  currentTime: string;
+  executionTime: number; // The LocalDateTime is converted to a string
+  username: string;
 }
 
 // Interface for the data sent to the server (PointRequestDTO)

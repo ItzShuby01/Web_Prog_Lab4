@@ -38,6 +38,10 @@ export class AuthService {
     return !!sessionStorage.getItem('username');
   }
 
+   getUsername(): string {
+     return sessionStorage.getItem('username') || '';
+  }
+
   getCredentials(): { username: string, password: string } | null {
     const username = sessionStorage.getItem('username');
     const password = sessionStorage.getItem('password');

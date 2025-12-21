@@ -24,36 +24,41 @@ import { IPoint, PointRequest } from '../../models/IPoint';
 export class MainAppComponent implements OnInit, AfterViewInit {
   @ViewChild('canvas', { static: false }) canvas!: ElementRef<HTMLCanvasElement>;
 
-  // Allowed R Options and X options
   xOptions: number[] = [-3, -2, -1, 0, 1, 2, 3, 4, 5];
   rOptions: number[] = [-3, -2, -1, 0, 1, 2, 3, 4, 5];
 
-  point: PointRequest = { x: 0, y: 0, r: 3, source : 'form' };
+  point: PointRequest = { x: 0, y: 0, r: 3, source: 'form' };
   results: IPoint[] = [];
+  currentPage = 0;
+  pageSize = 5;
+  totalElements = 0;
 
   constructor(
     private authService: AuthService,
     private areaService: AreaService,
     private router: Router,
-    private cdr: ChangeDetectorRef // Injected ChangeDetector
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
-    // Initial load
-    this.areaService.loadHistory().subscribe();
-
-    // Listen for any changes (Add or Clear)
+    // Subscribe to results and trigger redraw
     this.areaService.results$.subscribe(data => {
       this.results = data;
-
-      // Force Angular to update the HTML table immediately
-      this.cdr.detectChanges();
-
-      // Redraw the canvas with the new (or empty) data
+      // check if canvas exists because ngOnInit runs before ViewChild is ready
       if (this.canvas) {
         this.drawCanvas();
       }
+      this.cdr.detectChanges();
     });
+
+    // Subscribe to pagination total
+    this.areaService.totalElements.subscribe(total => {
+      this.totalElements = total;
+      this.cdr.detectChanges();
+    });
+
+    // Initial Load
+    this.areaService.loadHistory(this.currentPage, this.pageSize).subscribe();
   }
 
   ngAfterViewInit(): void {
@@ -65,33 +70,37 @@ export class MainAppComponent implements OnInit, AfterViewInit {
     this.drawCanvas();
   }
 
+  changePage(delta: number) {
+    this.currentPage += delta;
+    this.areaService.loadHistory(this.currentPage, this.pageSize).subscribe();
+  }
+
   submitForm(): void {
     if (!this.areaService.validateR(this.point.r)) {
-      alert("Invalid R value. Please select a positive radius.");
+      alert("Please select a positive radius.");
       return;
     }
     if (!this.areaService.validateY(this.point.y)) {
-      alert("Y must be a number between -3 and 3.");
+      alert("Y must be between -3 and 3.");
       return;
     }
 
-     // Ensure source is 'form' for button clicks
     const request: PointRequest = { ...this.point, source: 'form' };
-    this.areaService.checkPoint(this.point).subscribe();
+    this.areaService.checkPoint(request).subscribe();
   }
 
-  clearHistory(): void {
-    this.areaService.clearHistory().subscribe({
-      next: () => {
-        console.log('History cleared successfully');
-      },
-      error: (err) => console.error('Failed to clear history', err)
-    });
-  }
+  handleCanvasClick(event: MouseEvent): void {
+    if (this.point.r <= 0) {
+      alert("Please select a positive R first.");
+      return;
+    }
 
-  logout(): void {
-    this.authService.logout();
-    this.router.navigate(['/login']);
+    const rect = this.canvas.nativeElement.getBoundingClientRect();
+    const step = this.canvas.nativeElement.width / 10;
+    const x = (event.clientX - rect.left - this.canvas.nativeElement.width / 2) / step;
+    const y = (this.canvas.nativeElement.height / 2 - (event.clientY - rect.top)) / step;
+
+    this.areaService.checkPoint({ x, y, r: this.point.r, source: 'canvas' }).subscribe();
   }
 
   drawCanvas(): void {
@@ -105,23 +114,19 @@ export class MainAppComponent implements OnInit, AfterViewInit {
     const step = width / 10;
 
     ctx.clearRect(0, 0, width, height);
-
     const rVal = this.point.r;
+
     if (rVal > 0) {
       ctx.fillStyle = "rgba(0, 123, 255, 0.5)";
-
-      // Q1: Rectangle [0, R/2] x [0, R]
+      // Q1 Rectangle
       ctx.fillRect(centerX, centerY - (rVal * step), (rVal / 2) * step, rVal * step);
-
-      // Q2: Triangle connecting (0,0), (-R/2, 0), (0, R/2)
+      // Q2 Triangle
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
       ctx.lineTo(centerX - (rVal / 2) * step, centerY);
       ctx.lineTo(centerX, centerY - (rVal / 2) * step);
-      ctx.closePath();
       ctx.fill();
-
-      // Q4: Quarter Circle - R/2 radius
+      // Q4 Quarter Circle
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
       ctx.arc(centerX, centerY, (rVal / 2) * step, 0, Math.PI / 2);
@@ -130,23 +135,12 @@ export class MainAppComponent implements OnInit, AfterViewInit {
 
     // Axes
     ctx.strokeStyle = "black";
-    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, centerY); ctx.lineTo(width, centerY);
     ctx.moveTo(centerX, 0); ctx.lineTo(centerX, height);
     ctx.stroke();
 
-    // Labels
-    ctx.fillStyle = "black";
-    ctx.font = "10px Arial";
-    if (rVal > 0) {
-      ctx.fillText("R/2", centerX + (rVal / 2) * step - 5, centerY + 15);
-      ctx.fillText("-R/2", centerX - (rVal / 2) * step - 10, centerY + 15);
-      ctx.fillText("R", centerX + 5, centerY - (rVal * step) + 5);
-      ctx.fillText("R/2", centerX + 5, centerY - (rVal / 2) * step + 5);
-    }
-
-    // Points - Drawing points from the this.results array
+    // Draw saved points
     this.results.forEach(p => {
       ctx.fillStyle = p.hit ? "green" : "red";
       ctx.beginPath();
@@ -155,16 +149,20 @@ export class MainAppComponent implements OnInit, AfterViewInit {
     });
   }
 
-  handleCanvasClick(event: MouseEvent): void {
-    const rect = this.canvas.nativeElement.getBoundingClientRect();
-    const step = this.canvas.nativeElement.width / 10;
-    const x = (event.clientX - rect.left - this.canvas.nativeElement.width / 2) / step;
-    const y = (this.canvas.nativeElement.height / 2 - (event.clientY - rect.top)) / step;
+clearHistory(): void {
+  // Get current username
+  const currentUsername = this.authService.getUsername();
 
-    if (this.point.r <= 0) {
-      alert("Please select a positive R before clicking the canvas.");
-      return;
-    }
-    this.areaService.checkPoint({ x, y, r: this.point.r, source: 'canvas'}).subscribe();
+  this.areaService.clearHistory(currentUsername).subscribe({
+    next: () => {
+      console.log('User history cleared locally and on server');
+    },
+    error: (err) => console.error('Failed to clear history', err)
+  });
+}
+
+  logout(): void {
+    this.authService.logout();
+    this.router.navigate(['/login']);
   }
 }

@@ -23,7 +23,8 @@ public class AreaService {
         CalculationResultDTO resultDTO = checkPoint(
                 request.x(),
                 request.y(),
-                request.r()
+                request.r(),
+                user.getUsername()
         );
 
         // Convert DTO to Entity and Save to Database
@@ -35,13 +36,17 @@ public class AreaService {
     }
 
     // Method to check a point & create the result object
-    public CalculationResultDTO checkPoint(Double x, Double y, Double r) {
+    public CalculationResultDTO checkPoint(Double x, Double y, Double r, String username) {
         if (r <= 0) {
             throw new IllegalArgumentException("Radius R must be positive.");
         }
 
-        // Core Logic Calculation
+        long startTime = System.nanoTime();
+
         boolean hit = isHit(x, y, r);
+
+        long endTime = System.nanoTime();
+        long duration = endTime - startTime;
 
         // DTO for response
         return new CalculationResultDTO(
@@ -49,7 +54,9 @@ public class AreaService {
                 y,
                 r,
                 hit,
-                LocalDateTime.now()
+                LocalDateTime.now(), // currentTime
+                duration,            // executionTime (ns)
+                username
         );
     }
 
@@ -88,7 +95,8 @@ public class AreaService {
         entity.setY(dto.getY());
         entity.setR(dto.getR());
         entity.setHit(dto.getHit());
-        entity.setExecutionTime(dto.getExecutionTime());
+        entity.setCheckTime(dto.getCurrentTime());    // Stores the timestamp
+        entity.setExecutionTime(dto.getExecutionTime()); // Stores the execution time in ns
         return entity;
     }
 
@@ -99,8 +107,9 @@ public class AreaService {
                 entity.getY(),
                 entity.getR(),
                 entity.getHit(),
+                entity.getCheckTime(),
                 entity.getExecutionTime(),
-                entity.getId()
+                entity.getUser().getUsername() // Get owner name from linked User
         );
     }
 }

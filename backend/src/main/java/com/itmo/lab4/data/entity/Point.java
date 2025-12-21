@@ -17,11 +17,11 @@ public class Point {
     private Double y;
     private Double r;
     private Boolean hit;
-    private LocalDateTime executionTime;
+    private LocalDateTime checkTime;
+    private Long executionTime;
 
     //Link to the User who made the check
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-    // --------------------------------------------------------
 }

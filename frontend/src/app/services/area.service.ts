@@ -9,70 +9,58 @@ import { environment } from '../../environments/environment';
   providedIn: 'root'
 })
 export class AreaService {
-  private apiUrl = environment.apiUrl + '/area'; // /api/area
+  private apiUrl = environment.apiUrl + '/area';
 
-  // State management: Use BehaviorSubject to hold and share the list of results
   private resultsSubject = new BehaviorSubject<IPoint[]>([]);
   public results$: Observable<IPoint[]> = this.resultsSubject.asObservable();
 
+  public totalElements = new BehaviorSubject<number>(0);
+
   constructor(private http: HttpClient) { }
 
-  // Fetch history from Spring's GET /api/area/history
-  loadHistory(): Observable<IPoint[]> {
-    return this.http.get<IPoint[]>(`${this.apiUrl}/history`).pipe(
-      tap(points => {
-        // Update the shared state with the fetched history, newest first
-        this.resultsSubject.next(points.reverse());
+  loadHistory(page: number = 0, size: number = 5): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/history?page=${page}&size=${size}`).pipe(
+      tap(response => {
+        // Spring's Page object structure
+        this.resultsSubject.next(response.content);
+        this.totalElements.next(response.totalElements);
       })
     );
   }
 
-  // Submit a new point to Spring's POST /api/area/check
   checkPoint(request: PointRequest): Observable<IPoint> {
     return this.http.post<IPoint>(`${this.apiUrl}/check`, request).pipe(
-      tap(newPoint => {
-        // Add the new result to the start of the list and update the state
-        const currentResults = this.resultsSubject.getValue();
-        this.resultsSubject.next([newPoint, ...currentResults]);
-      })
-    );
-  }
-
-  // Clear history via Spring's DELETE /api/area/history
-  clearHistory(): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/history`).pipe(
       tap(() => {
-        // Clear the shared state upon successful database deletion
-        this.resultsSubject.next([]);
+        // Refresh the list from server to ensure pagination and data are sync'd
+        this.loadHistory(0, 5).subscribe();
       })
     );
   }
 
-  // --- Client-Side Geometry Logic (For Canvas Helper/Preview) ---
-  isHit(x: number, y: number, r: number): boolean {
-    if (r <= 0 || isNaN(r)) return false;
+ clearHistory(currentUsername: string): Observable<any> {
+   return this.http.delete(`${this.apiUrl}/history`).pipe(
+     tap(() => {
+       // Get the current list of all points
+       const allResults = this.resultsSubject.value;
 
-    // R1: Rectangle [0, R/2] x [0, R]
-    const region1 = (x >= 0 && x <= r / 2.0) && (y >= 0 && y <= r);
+       // Filter out ONLY the points belonging to the user who clicked clear
+       const remainingResults = allResults.filter(p => p.username !== currentUsername);
 
-    // R2: Trapezoid in Q2: x < 0. Bounded by x=-R/2, y=R, and line y=x+R/2.
-    const region2 = (x < 0 && x >= -r / 2.0) && (y >= 0 && y <= r) && (y >= x + r / 2.0);
+       // Update the state with only the other users' points
+       this.resultsSubject.next(remainingResults);
 
-    // R3: Quarter Circle [0, R/2] x [-R/2, 0] centered at (0,0) with radius R/2
-    const region3 = (x >= 0 && y <= 0) && (x * x + y * y <= (r / 2.0) * (r / 2.0));
-
-    return region1 || region2 || region3;
-  }
-
-  // --- Client-Side Validation Logic ---
+       // Optionally refresh from server to get accurate pagination counts
+       this.loadHistory(0, 5).subscribe();
+     })
+   );
+ }
 
   validateR(r: number | null): boolean {
-    const rOptions = [1.0, 2.0, 3.0, 4.0, 5.0];
-    return r !== null && rOptions.includes(r);
+    return r !== null && r > 0;
   }
 
-  validateY(y: number | null): boolean {
-    // For form submissions, Y must be between -3 and 3
-    return y !== null && y >= -3.0 && y <= 3.0;
+  validateY(y: any): boolean {
+    const val = parseFloat(y);
+    return !isNaN(val) && val >= -3 && val <= 3;
   }
 }

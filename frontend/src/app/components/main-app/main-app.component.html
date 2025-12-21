@@ -47,23 +47,30 @@
       <table>
         <thead>
         <tr>
+          <th>Owner</th>
           <th>X</th>
           <th>Y</th>
           <th>R</th>
           <th>Result</th>
-          <th>Time</th>
-        </tr>
+          <th>Check Time</th>      <th>Exec Time (ns)</th> </tr>
         </thead>
         <tbody>
         <tr *ngFor="let res of results">
+          <td>{{res.username}}</td>
           <td>{{res.x | number:'1.2-2'}}</td>
           <td>{{res.y | number:'1.2-2'}}</td>
           <td>{{res.r}}</td>
           <td [style.color]="res.hit ? 'green' : 'red'">{{res.hit ? 'HIT' : 'MISS'}}</td>
-          <td>{{res.executionTime | date:'HH:mm:ss'}}</td>
+          <td>{{res.currentTime | date:'HH:mm:ss'}}</td>
+          <td style="font-family: monospace;">{{res.executionTime}} ns</td>
         </tr>
         </tbody>
       </table>
+      <div class="pagination-controls">
+        <button (click)="changePage(-1)" [disabled]="currentPage === 0">Prev</button>
+        <span>Page {{currentPage + 1}}</span>
+        <button (click)="changePage(1)" [disabled]="(currentPage + 1) * pageSize >= totalElements">Next</button>
+      </div>
     </section>
   </div>
 </div>
