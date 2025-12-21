@@ -6,6 +6,10 @@ import com.itmo.lab4.data.entity.Point;
 import com.itmo.lab4.data.entity.User;
 import com.itmo.lab4.data.repository.PointRepository;
 import lombok.RequiredArgsConstructor; // for dependency injection
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional; // for saving
 import java.time.LocalDateTime;
@@ -58,6 +62,18 @@ public class AreaService {
                 duration,            // executionTime (ns)
                 username
         );
+    }
+
+
+    public Page<CalculationResultDTO> getHistoryPage(int page, int size) {
+        // Latest points always come first
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+
+        // Fetch from DB
+        Page<Point> pointsPage = pointRepository.findAllByOrderByIdDesc(pageable);
+
+        // Map entities to DTOs
+        return pointsPage.map(this::toDTO);
     }
 
     public boolean isHit(double x, double y, double r) {

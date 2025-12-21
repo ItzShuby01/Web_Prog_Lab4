@@ -63,16 +63,10 @@ public class AreaController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        // Latest points first
-        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        // Delegate business logic to the AreaService
+        Page<CalculationResultDTO> dtoPage = areaService.getHistoryPage(page, size);
 
-        // Fetch all points from all users
-        Page<Point> pointsPage = pointRepository.findAllByOrderByIdDesc(pageable);
-
-        // Convert Entities to DTOs (including username)
-        Page<CalculationResultDTO> dtoPage = pointsPage.map(areaService::toDTO);
-
-        return new ResponseEntity<>(dtoPage, HttpStatus.OK);
+        return ResponseEntity.ok(dtoPage);
     }
 
     // --- Endpoint 3: Clear all results for the current user ( DELETE /api/area/history)
