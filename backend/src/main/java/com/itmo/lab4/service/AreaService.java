@@ -1,13 +1,38 @@
 package com.itmo.lab4.service;
 
 import com.itmo.lab4.data.dto.CalculationResultDTO;
+import com.itmo.lab4.data.dto.PointRequestDTO;
 import com.itmo.lab4.data.entity.Point;
+import com.itmo.lab4.data.entity.User;
+import com.itmo.lab4.data.repository.PointRepository;
+import lombok.RequiredArgsConstructor; // for dependency injection
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional; // for saving
 import java.time.LocalDateTime;
 
 @Service // Tells Spring this class holds business logic
+@RequiredArgsConstructor // Needed to inject PointRepository
 public class AreaService {
+
+    private final PointRepository pointRepository;
+
+    // Business logic only lives inside  service and not controller
+    @Transactional
+    public CalculationResultDTO processAndSavePoint(PointRequestDTO request, User user) {
+        // Perform Calculation
+        CalculationResultDTO resultDTO = checkPoint(
+                request.x(),
+                request.y(),
+                request.r()
+        );
+
+        // Convert DTO to Entity and Save to Database
+        Point newPoint = toEntity(resultDTO);
+        newPoint.setUser(user); // Link the point to the current user
+        pointRepository.save(newPoint);
+
+        return resultDTO;
+    }
 
     // Method to check a point & create the result object
     public CalculationResultDTO checkPoint(Double x, Double y, Double r) {

@@ -7,6 +7,7 @@ import com.itmo.lab4.data.entity.User;
 import com.itmo.lab4.data.repository.PointRepository;
 import com.itmo.lab4.data.repository.UserRepository;
 import com.itmo.lab4.service.AreaService;
+import com.itmo.lab4.service.PointValidationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,7 @@ public class AreaController {
     private final AreaService areaService;
     private final PointRepository pointRepository;
     private final UserRepository userRepository; // To fetch the User object
+    private final PointValidationService validationService; // Injected for clean validation
 
     // Helper method to get the current authenticated User entity
     private User getCurrentUser(UserDetails userDetails) {
@@ -33,30 +35,19 @@ public class AreaController {
                 .orElseThrow(() -> new RuntimeException("Authenticated user not found in database."));
     }
 
-    //  --- Endpoint 1: Submit a new point check ( POST /api/area/check)
+    // --- Endpoint 1: Submit a new point check
     @PostMapping("/check")
     public ResponseEntity<CalculationResultDTO> checkPoint(@RequestBody PointRequestDTO request,
                                                            @AuthenticationPrincipal UserDetails userDetails) {
 
+        // Backend Validation
+        validationService.validate(request);
+
         // Get the authenticated User
         User currentUser = getCurrentUser(userDetails);
 
-        // Perform a simplified Validation (Front-end handles most validation)
-        if (request.x() == null || request.y() == null || request.r() == null || request.r() <= 0) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
-
-        // Perform Calculation
-        CalculationResultDTO resultDTO = areaService.checkPoint(
-                request.x(),
-                request.y(),
-                request.r()
-        );
-
-        // Convert DTO to Entity and Save to Database
-        Point newPoint = areaService.toEntity(resultDTO);
-        newPoint.setUser(currentUser); // Link the point to the current user !!
-        pointRepository.save(newPoint);
+        // Delegate ALL business logic to AreaService
+        CalculationResultDTO resultDTO = areaService.processAndSavePoint(request, currentUser);
 
         // Return the result DTO to the Angular client
         return new ResponseEntity<>(resultDTO, HttpStatus.CREATED);
