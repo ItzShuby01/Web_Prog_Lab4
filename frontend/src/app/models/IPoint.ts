@@ -12,4 +12,5 @@ export interface PointRequest {
   x: number;
   y: number;
   r: number;
+  source: string; //'canvas' | 'form'
 }

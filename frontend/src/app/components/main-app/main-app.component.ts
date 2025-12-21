@@ -28,7 +28,7 @@ export class MainAppComponent implements OnInit, AfterViewInit {
   xOptions: number[] = [-3, -2, -1, 0, 1, 2, 3, 4, 5];
   rOptions: number[] = [-3, -2, -1, 0, 1, 2, 3, 4, 5];
 
-  point: PointRequest = { x: 0, y: 0, r: 3 };
+  point: PointRequest = { x: 0, y: 0, r: 3, source : 'form' };
   results: IPoint[] = [];
 
   constructor(
@@ -74,6 +74,9 @@ export class MainAppComponent implements OnInit, AfterViewInit {
       alert("Y must be a number between -3 and 3.");
       return;
     }
+
+     // Ensure source is 'form' for button clicks
+    const request: PointRequest = { ...this.point, source: 'form' };
     this.areaService.checkPoint(this.point).subscribe();
   }
 
@@ -162,6 +165,6 @@ export class MainAppComponent implements OnInit, AfterViewInit {
       alert("Please select a positive R before clicking the canvas.");
       return;
     }
-    this.areaService.checkPoint({ x, y, r: this.point.r }).subscribe();
+    this.areaService.checkPoint({ x, y, r: this.point.r, source: 'canvas'}).subscribe();
   }
 }
