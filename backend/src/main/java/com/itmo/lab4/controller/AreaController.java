@@ -42,15 +42,15 @@ public class AreaController {
         User currentUser = getCurrentUser(userDetails);
 
         // Perform a simplified Validation (Front-end handles most validation)
-        if (request.getX() == null || request.getY() == null || request.getR() == null || request.getR() <= 0) {
+        if (request.x() == null || request.y() == null || request.r() == null || request.r() <= 0) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
 
         // Perform Calculation
         CalculationResultDTO resultDTO = areaService.checkPoint(
-                request.getX(),
-                request.getY(),
-                request.getR()
+                request.x(),
+                request.y(),
+                request.r()
         );
 
         // Convert DTO to Entity and Save to Database
