@@ -1,6 +1,7 @@
 package com.itmo.lab4.config;
 
 import com.itmo.lab4.service.CustomUserDetailsService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -44,23 +45,29 @@ public class SecurityConfig {
         // Return the final built object
         return authenticationManagerBuilder.build();
     }
+
     //Security Filter Chain (Defines access rules)
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Disable CSRF as we're using a stateless API
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Since now the backend serve the frontend (html, css, js)
-                        // Allow public access to the Angular files
-                        .requestMatchers("/", "/index.html", "/favicon.ico", "/*.js", "/*.css").permitAll()
-                        // Allow authentication endpoints
+                        // Allow the Angular files & standard routes to bypass security
+                        .requestMatchers("/", "/index.html", "/favicon.ico", "/*.js", "/*.css", "/assets/**").permitAll()
+                        .requestMatchers("/login", "/main", "/registration").permitAll()
+                        // Allow Auth API
                         .requestMatchers("/api/auth/**").permitAll()
-                        // Secure everything else (like /api/area/**)
+                        // Secure the rest
                         .anyRequest().authenticated()
                 )
-                .httpBasic(Customizer.withDefaults());
+                // Enable Basic Auth but suppress the browser's native login dialog
+                .httpBasic(basic -> basic
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            // Send 401 WITHOUT the "WWW-Authenticate" header
+                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, authException.getMessage());
+                        })
+                );
 
         return http.build();
     }
